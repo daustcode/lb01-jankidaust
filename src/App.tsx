@@ -21,7 +21,7 @@ import { StudentSortDropdown, sortStudents, type SortKey } from './components/St
 import { StudentSearchAdvanced } from './components/StudentSearchAdvanced';
 import { AdminImportExportTab } from './components/AdminImportExportTab';
 import { AdminBackendTab } from './components/AdminBackendTab';
-import { ImageFallback } from './components/ImageFallback';
+import { ImageFallback, dicebearAvatar } from './components/ImageFallback';
 import { CacheHealthTab } from './components/CacheHealthTab';
 import { 
   Trophy, ArrowLeft, Plus, CheckCircle2, Circle, Medal, Award, Flame, 
