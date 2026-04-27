@@ -79,6 +79,16 @@ export function ImageFallback({
             onLoad?.(e);
           }}
           onError={(e) => {
+            // For avatars, swap broken images for a Dicebear avatar instead
+            // of degrading to a glyph placeholder.
+            if (variant === "avatar") {
+              const target = e.currentTarget;
+              const fb = dicebearAvatar(alt);
+              if (target.src !== fb) {
+                target.src = fb;
+                return;
+              }
+            }
             setStatus("error");
             onError?.(e);
           }}
