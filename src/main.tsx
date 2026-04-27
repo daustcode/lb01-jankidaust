@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
+const DEFAULT_SUPABASE_URL = 'https://xmsjbzujyfrkecgwfxlc.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
+  'sb_publishable_NK7ByKJ_l2qizNoICxrnXQ_-2zTWOiE';
+
 // ---------------------------------------------------------------------------
 // White-screen guard
 // ---------------------------------------------------------------------------
@@ -66,16 +70,15 @@ async function hardReset() {
 }
 
 // 1. Env-var preflight — runs before any module that touches Supabase.
-const missingEnv: string[] = [];
-if (!import.meta.env.VITE_SUPABASE_URL) missingEnv.push('VITE_SUPABASE_URL');
-if (!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) missingEnv.push('VITE_SUPABASE_PUBLISHABLE_KEY');
-if (missingEnv.length) {
+const resolvedSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const resolvedSupabaseKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
+if (!resolvedSupabaseUrl || !resolvedSupabaseKey) {
   renderRecovery(
     'Backend not configured',
-    'The app was built without the required backend configuration. Clear the cached version and reload to pick up the latest build.',
-    'Missing: ' + missingEnv.join(', '),
+    'The app could not resolve its default backend configuration. Clear the cached version and reload to pick up the latest build.',
   );
-  throw new Error('Missing required env vars: ' + missingEnv.join(', '));
+  throw new Error('Missing required backend defaults');
 }
 
 // 2. Catch any synchronous throw from chunks loaded after this point —
@@ -111,7 +114,28 @@ window.addEventListener('unhandledrejection', (e) => {
 // Service worker: register in production only. In dev (Vite HMR) an SW will
 // happily cache stale module URLs and produce phantom white screens.
 if ('serviceWorker' in navigator) {
-  if (import.meta.env.PROD) {
+  const isInIframe = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
+  const isPreviewHost =
+    window.location.hostname.includes('id-preview--') ||
+    window.location.hostname.includes('lovableproject.com') ||
+    window.location.hostname.includes('lovable.app');
+
+  if (isPreviewHost || isInIframe) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((r) => r.unregister().catch(() => {}));
+    }).catch(() => {});
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        keys.forEach((k) => caches.delete(k).catch(() => {}));
+      }).catch(() => {});
+    }
+  } else if (import.meta.env.PROD) {
     window.addEventListener('load', () => {
       navigator.serviceWorker
         .register('/sw.js', { updateViaCache: 'none' })

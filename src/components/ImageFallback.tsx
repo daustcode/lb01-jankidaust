@@ -4,8 +4,8 @@ import { ImageIcon, User as UserIcon } from "lucide-react";
 /**
  * Drop-in replacement for <img>. Three jobs:
  *   1. Never pass src="" (browsers re-fetch the page URL on empty src).
- *   2. Show a shimmer placeholder while the real image is loading.
- *   3. Show a friendly fallback (avatar / logo glyph) on missing or broken src.
+ *   2. Keep the layout stable while the real image loads.
+ *   3. Show a clean fallback (avatar / logo glyph) on missing or broken src.
  *
  * Use `variant="avatar"` for circular people images, `variant="logo"` for
  * brand marks, `variant="generic"` for everything else.
@@ -49,7 +49,6 @@ export function ImageFallback({
   }, [cleanSrc]);
 
   const showImage = cleanSrc && status !== "error";
-  const showSkeleton = cleanSrc && status === "loading";
   const showFallback = !cleanSrc || status === "error";
 
   return (
@@ -64,7 +63,7 @@ export function ImageFallback({
           {...rest}
           src={cleanSrc!}
           alt={alt}
-          className={className}
+          className={`${className} ${status === "loading" ? "opacity-0" : "opacity-100"}`}
           onLoad={(e) => {
             setStatus("loaded");
             onLoad?.(e);
@@ -73,12 +72,6 @@ export function ImageFallback({
             setStatus("error");
             onError?.(e);
           }}
-        />
-      )}
-      {showSkeleton && (
-        <span
-          aria-hidden
-          className={`${className} absolute inset-0 bg-gradient-to-br from-base-200 via-base-100 to-base-200 animate-pulse`}
         />
       )}
       {showFallback && (
