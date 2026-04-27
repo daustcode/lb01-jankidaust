@@ -1568,7 +1568,7 @@ function StudentAdminModal({ student, masterGoals, categories, onClose, onSave }
     id: student?.id || '',
     name: student?.name || '',
     bio: student?.bio || '',
-    photo: student?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.floor(Math.random()*100)}&backgroundColor=b6e3f4`,
+    photo: student?.photo || dicebearAvatar(student?.name || student?.id || 'student'),
     tags: student?.tags ? [...student.tags] : [],
     assignedGoals: student?.assignedGoals ? [...student.assignedGoals] : []
   });
