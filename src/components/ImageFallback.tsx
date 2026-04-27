@@ -24,6 +24,12 @@ export interface ImageFallbackProps
   wrapperClassName?: string;
 }
 
+/** Build a deterministic Dicebear avatar URL from any seed string. */
+export function dicebearAvatar(seed: string | undefined | null): string {
+  const safeSeed = encodeURIComponent((seed ?? "student").trim() || "student");
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${safeSeed}&backgroundColor=b6e3f4,d1d4f9,c0aede,ffd5dc,ffdfbf`;
+}
+
 export function ImageFallback({
   src,
   alt,
@@ -35,7 +41,11 @@ export function ImageFallback({
   onError,
   ...rest
 }: ImageFallbackProps) {
-  const cleanSrc = typeof src === "string" && src.trim() !== "" ? src : null;
+  const rawSrc = typeof src === "string" && src.trim() !== "" ? src : null;
+  // Avatars: if no source provided, use Dicebear keyed off the alt text so
+  // each student gets a stable, recognizable placeholder instead of a glyph.
+  const cleanSrc =
+    rawSrc ?? (variant === "avatar" ? dicebearAvatar(alt) : null);
 
   // status: "loading" until the browser fires onload, "loaded" or "error".
   // If there's no src at all, jump straight to the fallback.
@@ -69,6 +79,16 @@ export function ImageFallback({
             onLoad?.(e);
           }}
           onError={(e) => {
+            // For avatars, swap broken images for a Dicebear avatar instead
+            // of degrading to a glyph placeholder.
+            if (variant === "avatar") {
+              const target = e.currentTarget;
+              const fb = dicebearAvatar(alt);
+              if (target.src !== fb) {
+                target.src = fb;
+                return;
+              }
+            }
             setStatus("error");
             onError?.(e);
           }}

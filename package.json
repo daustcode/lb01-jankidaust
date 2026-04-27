@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit && node scripts/check-image-fallback.mjs",
+    "check:images": "node scripts/check-image-fallback.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

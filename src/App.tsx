@@ -21,7 +21,7 @@ import { StudentSortDropdown, sortStudents, type SortKey } from './components/St
 import { StudentSearchAdvanced } from './components/StudentSearchAdvanced';
 import { AdminImportExportTab } from './components/AdminImportExportTab';
 import { AdminBackendTab } from './components/AdminBackendTab';
-import { ImageFallback } from './components/ImageFallback';
+import { ImageFallback, dicebearAvatar } from './components/ImageFallback';
 import { CacheHealthTab } from './components/CacheHealthTab';
 import { 
   Trophy, ArrowLeft, Plus, CheckCircle2, Circle, Medal, Award, Flame, 
@@ -1568,7 +1568,7 @@ function StudentAdminModal({ student, masterGoals, categories, onClose, onSave }
     id: student?.id || '',
     name: student?.name || '',
     bio: student?.bio || '',
-    photo: student?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.floor(Math.random()*100)}&backgroundColor=b6e3f4`,
+    photo: student?.photo || dicebearAvatar(student?.name || student?.id || 'student'),
     tags: student?.tags ? [...student.tags] : [],
     assignedGoals: student?.assignedGoals ? [...student.assignedGoals] : []
   });
