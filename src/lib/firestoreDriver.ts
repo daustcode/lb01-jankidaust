@@ -17,11 +17,10 @@ import {
   getApp,
   getApps,
   deleteApp,
-  type FirebaseApp,
-  type FirebaseOptions,
 } from "firebase/app";
 import {
   getFirestore,
+  initializeFirestore,
   collection,
   doc,
   getDoc,
@@ -32,12 +31,20 @@ import {
   deleteDoc,
   query,
   limit as fsLimit,
-  type Firestore,
 } from "firebase/firestore";
+
+// Local structural stand-ins. The firebase package re-exports these names as
+// namespaces in some bundler configs which breaks `type` imports. We only
+// need an opaque shape for our internal cache/maps.
+type FirebaseOptions = Record<string, any>;
+type FirebaseApp = { name: string; options: any; automaticDataCollectionEnabled?: boolean };
+type Firestore = any;
 
 export type FirebaseConfig = FirebaseOptions & {
   apiKey: string;
   projectId: string;
+  databaseId?: string;
+  firestoreDatabaseId?: string;
   authDomain?: string;
   appId?: string;
   storageBucket?: string;
@@ -46,6 +53,7 @@ export type FirebaseConfig = FirebaseOptions & {
 
 /** Default collections the app expects (mirrors APP_TABLES). */
 export const FIREBASE_APP_COLLECTIONS = [
+  "admin_users",
   "students",
   "master_goals",
   "categories",
@@ -62,6 +70,15 @@ export const FIREBASE_APP_COLLECTIONS = [
  * tagged `__bootstrap: true` so admins can filter or remove it later.
  */
 export const FIREBASE_DEFAULT_DOCS: Record<string, Record<string, any>> = {
+  admin_users: {
+    email: "",
+    password: "",
+    full_name: "",
+    photo_url: "",
+    role: "admin",
+    privileges: [],
+    created_at: "",
+  },
   students: {
     name: "",
     photo: "",
@@ -137,7 +154,13 @@ export function connectFirestore(connId: string, config: FirebaseConfig): Firest
     app = initializeApp(config, connId);
   }
   appCache.set(connId, app);
-  const db = getFirestore(app);
+  const databaseId = config.firestoreDatabaseId || config.databaseId || "(default)";
+  let db: Firestore;
+  try {
+    db = initializeFirestore(app, { experimentalForceLongPolling: true }, databaseId);
+  } catch {
+    db = getFirestore(app, databaseId);
+  }
   dbCache.set(connId, db);
   return db;
 }
@@ -218,9 +241,24 @@ export async function testFirestore(
       const snaps = await getDocs(query(collection(db, name), fsLimit(2)));
       probe.canRead = true;
       probe.docCount = snaps.size;
-      probe.exists = snaps.docs.some((d) => d.id !== PROBE_ID);
+      probe.exists = snaps.docs.some((d: any) => d.id !== PROBE_ID);
     } catch (e: any) {
-      probe.readError = String(e?.message || e);
+      const msg = String(e?.message || e);
+      // Add a helpful hint when the named Firestore DB does not exist.
+      if (/NOT_FOUND|Database .* not found|database does not exist/i.test(msg)) {
+        probe.readError =
+          `${msg} — The Firestore database id "${
+            (config as any).firestoreDatabaseId || (config as any).databaseId || "(default)"
+          }" was not found on project "${config.projectId}". ` +
+          `Either create that database in the Firebase console (Firestore → Add database), ` +
+          `or remove the "firestoreDatabaseId" field so the connection uses the (default) database.`;
+      } else if (/permission-denied|Missing or insufficient permissions/i.test(msg)) {
+        probe.readError =
+          `${msg} — Update Firestore Security Rules for project "${config.projectId}" to allow reads on collection "${name}". ` +
+          `Quick test rule: \`match /{document=**} { allow read, write: if true; }\` (do NOT use in production).`;
+      } else {
+        probe.readError = msg;
+      }
     }
 
     // 2) write dry-run
@@ -281,7 +319,7 @@ export async function bootstrapFirestoreSchema(
       // Skip seeding if the collection already has user data.
       const existing = await getDocs(query(collection(db, name), fsLimit(1)));
       const hasReal = existing.docs.some(
-        (d) => d.id !== SCHEMA_ID && d.id !== "__lovable_probe__",
+        (d: any) => d.id !== SCHEMA_ID && d.id !== "__lovable_probe__",
       );
       if (hasReal) {
         out.push({ name, ok: true, created: false });
@@ -440,5 +478,5 @@ export async function fsDeleteAll(
 ): Promise<void> {
   const db = connectFirestore(connId, config);
   const snaps = await getDocs(collection(db, table));
-  await Promise.all(snaps.docs.map((d) => deleteDoc(d.ref)));
+  await Promise.all(snaps.docs.map((d: any) => deleteDoc(d.ref)));
 }

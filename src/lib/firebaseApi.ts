@@ -14,7 +14,10 @@ import {
   connUpsertReturning,
   connUpdate,
   connDeleteById,
-} from "@/lib/dbConnections";
+  markConnectionFailed,
+  DEFAULT_CONNECTION_ID,
+} from './dbConnections';
+import { readCache, writeCache } from './localCache';
 
 // --- Admin password (presentation-level) ---
 const ADMIN_PASSWORD = "janki_app";
@@ -207,10 +210,7 @@ const computeStats = async (range: string, from?: string | null, to?: string | n
 };
 
 // --- Router ---
-export async function firebaseApiFetch(
-  url: string,
-  init: RequestInit = {},
-): Promise<Response> {
+async function runRouter(url: string, init: RequestInit, conn: any): Promise<Response> {
   const method = (init.method || "GET").toUpperCase();
   const path = url.split("?")[0];
   const queryStr = url.includes("?") ? url.slice(url.indexOf("?") + 1) : "";
@@ -224,25 +224,79 @@ export async function firebaseApiFetch(
     }
   }
 
-  const conn = getActiveConnection();
-
   try {
     // ===== AUTH =====
     if (path === "/api/login" && method === "POST") {
-      if (body?.password === ADMIN_PASSWORD) {
-        return ok({ success: true, token: TOKEN_VALUE });
+      const email = body?.email?.toLowerCase() || '';
+      if (!email && body?.password === ADMIN_PASSWORD) {
+        return ok({ success: true, token: TOKEN_VALUE, role: 'super_admin' });
       }
-      return fail(401, "Incorrect password");
+      if (email) {
+        let users = [];
+        try { users = await connSelectQuery(conn, "admin_users") || []; }catch(e){}
+        const found = users?.find((u) => (u.email || '').toLowerCase() === email && u.password === body?.password);
+        if (found) {
+          return ok({ success: true, token: `usr_${found.id}`, role: found.role, id: found.id });
+        }
+      }
+      return fail(401, "Incorrect credentials");
     }
     if (path === "/api/logout" && method === "POST") {
       return ok();
     }
     if (path === "/api/me" && method === "GET") {
-      const headers: any = init.headers;
-      const auth = headers?.get?.("Authorization") || headers?.Authorization;
+      const headers = init.headers as any;
+      let auth = null;
+      if (headers && typeof headers.get === "function") auth = headers.get("Authorization") || headers.get("authorization");
+      else if (headers) auth = headers.Authorization || headers.authorization;
       const token = typeof auth === "string" ? auth.replace("Bearer ", "") : null;
-      return ok({ authenticated: token === TOKEN_VALUE });
+      
+      if (!token) return fail(401, "Missing token");
+      if (token === TOKEN_VALUE) {
+        return ok({ 
+          authenticated: true, 
+          user: { id: 'legacy', role: 'super_admin', email: 'admin@system', full_name: 'System Admin', privileges: [] } 
+        });
+      }
+      if (token.startsWith('usr_')) {
+        const id = token.slice(4);
+        let users = [];
+        try { users = await connSelectQuery(conn, "admin_users") || []; }catch(e){}
+        const user = users?.find((u) => String(u.id) === String(id));
+        if (user) {
+          const { password, ...safeUser } = user;
+          return ok({ authenticated: true, user: safeUser });
+        }
+      }
+      return fail(401, "Invalid token");
     }
+
+    // ===== ADMIN USERS =====
+    if (path === "/api/admin_users") {
+      let users = [];
+      try { users = await connSelectQuery(conn, "admin_users") || []; }catch(e){}
+      
+      if (method === "GET") {
+        return ok(users?.map((u) => { const { password, ...r } = u; return r; }) || []);
+      }
+      if (method === "POST") {
+        const newUser = { id: Date.now().toString(), privileges: [], created_at: new Date().toISOString(), ...body };
+        await connInsertReturning(conn, "admin_users", [newUser]);
+        return ok({ success: true, id: newUser.id });
+      }
+      if (method === "PUT") {
+        if (!body.id) return fail(400, "Missing id");
+        await connUpdate(conn, "admin_users", `id=eq.${body.id}`, body);
+        return ok({ success: true });
+      }
+      if (method === "DELETE") {
+        const id = query.get("id");
+        if (!id) return fail(400, "Missing id");
+        await connDeleteById(conn, "admin_users", id);
+        return ok({ success: true });
+      }
+    }
+
 
     // ===== SETTINGS =====
     if (path === "/api/settings" && method === "GET") {
@@ -385,6 +439,7 @@ export async function firebaseApiFetch(
     }
 
     // ===== LOGS =====
+    if (path === "/api/logs" && method === "POST") { await connInsertReturning(conn, "activity_logs", [{ id: "log-"+Date.now(), timestamp: new Date().toISOString(), ...body }]).catch(()=>[]); return ok({success: true}); }
     if (path === "/api/logs" && method === "GET") {
       const rows = await connSelectQuery(
         conn,
@@ -392,6 +447,20 @@ export async function firebaseApiFetch(
         "select=*&order=timestamp.desc&limit=500",
       ).catch(() => []);
       return ok(rows);
+    }
+
+    // ===== EVENTS =====
+    if (path === "/api/events" && method === "GET") {
+      const rows = await connSelectQuery(
+        conn,
+        "app_events",
+        "select=*&order=created_at.desc&limit=500",
+      ).catch(() => []);
+      return ok(rows);
+    }
+    if (path === "/api/events" && method === "POST") { 
+      await connInsertReturning(conn, "app_events", [{ id: "evt-"+Date.now(), ...body }]).catch(()=>[]); 
+      return ok({success: true}); 
     }
 
     // ===== STATS =====
@@ -402,9 +471,113 @@ export async function firebaseApiFetch(
       return ok(await computeStats(range, from, to));
     }
 
+    // ===== POSTS =====
+    if (path === "/api/posts") {
+      if (method === "GET") {
+        let rows = [];
+        try { rows = await connSelectQuery(conn, "posts", "select=*&order=created_at.desc") || []; }catch(e){}
+        return ok(rows);
+      }
+      if (method === "POST") {
+        const input = {
+          id: Date.now().toString(),
+          ...body,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        const rows = await connInsertReturning(conn, "posts", [input]);
+        logAction("Artikel Dibuat", `Admin membuat artikel baru: ${input.title}`, "system");
+        return ok(rows?.[0] || input);
+      }
+    }
+    const postMatch = path.match(/^\/api\/posts\/([^/]+)$/);
+    if (postMatch) {
+      const id = postMatch[1];
+      if (method === "PUT") {
+        const input = { ...body, updated_at: new Date().toISOString() };
+        const rows = await connUpdate(conn, "posts", `id=eq.${id}`, input);
+        logAction("Artikel Diperbarui", `Admin memperbarui artikel: ${input.title || id}`, "system");
+        return ok(rows?.[0] || { id, ...input });
+      }
+      if (method === "DELETE") {
+        await connDeleteById(conn, "posts", id);
+        logAction("Artikel Dihapus", `Admin menghapus artikel: ${id}`, "system");
+        return ok({ success: true });
+      }
+    }
+
     return fail(404, `No handler for ${method} ${path}`);
   } catch (err: any) {
     console.error("api error:", method, path, err);
     return fail(500, String(err?.message || err));
+  }
+}
+
+// Public entry point. Tries the active connection; if it fails (e.g. broken
+// external Supabase project the user added) we mark it failed, fall back to
+// the default Lovable Cloud connection, and retry once. This guarantees the
+// app shell always loads instead of hanging on a dead backend.
+export async function firebaseApiFetch(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const conn = getActiveConnection();
+  const method = (init.method || 'GET').toUpperCase();
+  const path = url.split('?')[0];
+  const isCacheableRead =
+    method === 'GET' &&
+    (path === '/api/students' ||
+      path === '/api/categories' ||
+      path === '/api/masterGoals' ||
+      path === '/api/settings' ||
+      path === '/api/admin_users' ||
+      path === '/api/posts' ||
+      path === '/api/logs' ||
+      path === '/api/events');
+  const cacheScope = isCacheableRead ? `read::${url}` : null;
+
+  const finalize = async (res: Response) => {
+    if (cacheScope && res.ok) {
+      try {
+        const clone = res.clone();
+        const data = await clone.json();
+        writeCache(conn.id, cacheScope, data);
+      } catch {}
+    }
+    return res;
+  };
+
+  try {
+    const res = await runRouter(url, init, conn);
+    if (res.status >= 500 && conn.id !== DEFAULT_CONNECTION_ID) {
+      throw new Error('backend 5xx');
+    }
+    return finalize(res);
+  } catch (err: any) {
+    // 1) Try cached read so UI never shows blank when remote is unreachable.
+    if (cacheScope) {
+      const cached = readCache<any>(conn.id, cacheScope);
+      if (cached !== null) {
+        console.warn(
+          `[firebaseApiFetch] ${url} failed; serving local cache for ${conn.id}.`,
+          err?.message || err,
+        );
+        return new Response(JSON.stringify(cached), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'X-Local-Cache': '1' },
+        });
+      }
+    }
+    // 2) Fallback to default connection if the active one is broken.
+    if (conn.id !== DEFAULT_CONNECTION_ID) {
+      console.warn(
+        `[firebaseApiFetch] active connection ${conn.id} failed, falling back to default`,
+        err?.message || err,
+      );
+      markConnectionFailed(conn.id);
+      const res = await runRouter(url, init, getActiveConnection());
+      return finalize(res);
+    }
+    throw err;
   }
 }

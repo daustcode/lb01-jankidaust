@@ -8,6 +8,10 @@ import {
   Loader2,
   CheckCircle2,
   Cpu,
+  Smartphone,
+  Bell,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 
 /**
@@ -106,34 +110,6 @@ export function CacheHealthTab() {
       navigator.serviceWorker.removeEventListener("controllerchange", onChange);
   }, [refresh]);
 
-  const handleClearAndReload = async () => {
-    if (!confirm("This will clear all cached assets and reload the app. Continue?")) return;
-    setBusy("clearing");
-    setLastAction(null);
-    try {
-      // Tell the SW to drop its caches first (it owns them).
-      if ("serviceWorker" in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        reg?.active?.postMessage("clear-caches");
-        await new Promise((r) => setTimeout(r, 200));
-      }
-      // Then drop everything we can see directly.
-      if ("caches" in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      }
-      // Best-effort storage clear (won't touch IndexedDB / localStorage to
-      // avoid wiping user-saved DB connections; admins can do that manually).
-      log("caches cleared, reloading…");
-      setLastAction("Cleared caches. Reloading…");
-      // tiny pause so the user sees the toast
-      setTimeout(() => window.location.reload(), 350);
-    } catch (e: any) {
-      setBusy(null);
-      setLastAction("Failed to clear: " + (e?.message || e));
-    }
-  };
-
   const handleSkipWaiting = async () => {
     setBusy("skipping");
     setLastAction(null);
@@ -180,15 +156,15 @@ export function CacheHealthTab() {
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
       <header className="flex items-start gap-3">
-        <div className="w-11 h-11 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+        <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
           <ShieldCheck className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-          <h2 className="text-xl sm:text-2xl font-black text-text-main">
-            Cache Health
+          <h2 className="text-xl sm:text-2xl font-black text-foreground">
+            Manajemen & Status PWA
           </h2>
-          <p className="text-sm text-text-muted font-medium">
-            Inspect the service worker, force-clear caches, and confirm new
+          <p className="text-sm text-muted-foreground font-medium">
+            Inspect the service worker, manage PWA status, clear caches, and confirm new
             builds have been applied.
           </p>
         </div>
@@ -201,45 +177,35 @@ export function CacheHealthTab() {
         hasWaiting={hasWaiting}
       />
 
-      <div className="rounded-2xl border border-base-200 bg-base-100 p-4 space-y-3">
-        <h3 className="font-black text-text-main text-sm">Actions</h3>
+      <PwaCapabilitiesCard />
+
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+        <h3 className="font-black text-foreground text-sm">Aksi</h3>
         <div className="grid sm:grid-cols-2 gap-2">
-          <button
-            onClick={handleClearAndReload}
-            disabled={busy !== null}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 disabled:opacity-60 active:scale-95 transition-all"
-          >
-            {busy === "clearing" ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
-            Clear caches & reload
-          </button>
           <button
             onClick={handleSkipWaiting}
             disabled={busy !== null || !hasWaiting}
             className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 disabled:opacity-50 active:scale-95 transition-all"
-            title={hasWaiting ? "Activate the pending update" : "No update waiting"}
+            title={hasWaiting ? "Aktifkan pembaruan tertunda" : "Tidak ada pembaruan tertunda"}
           >
             {busy === "skipping" ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <CheckCircle2 className="w-4 h-4" />
             )}
-            Activate pending update
+            Aktifkan pembaruan tertunda
           </button>
           <button
             onClick={handleHardRefresh}
             disabled={busy !== null}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-base-200 text-text-main font-bold hover:bg-base-200/80 disabled:opacity-60 active:scale-95 transition-all"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-secondary text-foreground font-bold hover:bg-secondary/80 disabled:opacity-60 active:scale-95 transition-all"
           >
             {busy === "refreshing" ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <RefreshCw className="w-4 h-4" />
             )}
-            Re-check status
+            Cek ulang status
           </button>
           <button
             onClick={handleUnregister}
@@ -247,26 +213,26 @@ export function CacheHealthTab() {
             className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 disabled:opacity-60 active:scale-95 transition-all"
           >
             <AlertTriangle className="w-4 h-4" />
-            Unregister service worker
+            Hapus Service Worker
           </button>
         </div>
         {lastAction && (
-          <p className="text-xs font-bold text-text-muted">{lastAction}</p>
+          <p className="text-xs font-bold text-muted-foreground">{lastAction}</p>
         )}
       </div>
 
-      <div className="rounded-2xl border border-base-200 bg-base-100 p-4">
-        <h3 className="font-black text-text-main text-sm mb-2 flex items-center gap-2">
-          <HardDrive className="w-4 h-4" /> Cache buckets
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <h3 className="font-black text-foreground text-sm mb-2 flex items-center gap-2">
+          <HardDrive className="w-4 h-4" /> Penyimpanan Cache
         </h3>
         {cacheKeys.length === 0 ? (
-          <p className="text-xs text-text-muted">No caches stored.</p>
+          <p className="text-xs text-muted-foreground">Tidak ada cache yang disimpan.</p>
         ) : (
           <ul className="text-xs font-mono space-y-1">
             {cacheKeys.map((k) => (
               <li
                 key={k}
-                className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-base-200/40"
+                className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-secondary/40"
               >
                 <span className="truncate">{k}</span>
               </li>
@@ -291,9 +257,9 @@ function StatusCard({
 }) {
   if (status === "checking") {
     return (
-      <div className="rounded-2xl border border-base-200 bg-base-100 p-4 flex items-center gap-3">
-        <Loader2 className="w-4 h-4 animate-spin text-text-muted" />
-        <span className="text-sm text-text-muted font-bold">Checking…</span>
+      <div className="rounded-2xl border border-border bg-card p-4 flex items-center gap-3">
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground font-bold">Memeriksa…</span>
       </div>
     );
   }
@@ -307,13 +273,13 @@ function StatusCard({
   }
   if (status === "no-sw") {
     return (
-      <div className="rounded-2xl border border-base-200 bg-base-100 p-4 text-sm text-text-main">
+      <div className="rounded-2xl border border-border bg-card p-4 text-sm text-foreground">
         <div className="flex items-center gap-2 mb-1">
-          <Cpu className="w-4 h-4 text-text-muted" />
-          <span className="font-black">No service worker registered.</span>
+          <Cpu className="w-4 h-4 text-muted-foreground" />
+          <span className="font-black">Tidak ada service worker terdaftar.</span>
         </div>
-        <p className="text-xs text-text-muted">
-          The app is running directly from the network. {cacheKeys.length} stale
+        <p className="text-xs text-muted-foreground">
+          Aplikasi berjalan langsung dari jaringan. {cacheKeys.length} stale
           cache(s) found and can be cleared below.
         </p>
       </div>
@@ -324,32 +290,121 @@ function StatusCard({
       <div className="flex items-center gap-2 mb-2">
         <CheckCircle2 className="w-4 h-4 text-emerald-700" />
         <span className="font-black text-emerald-900">
-          Service worker active
+          Service worker aktif
         </span>
         {hasWaiting && (
           <span className="ml-auto text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
-            update waiting
+            Pembaruan tertunda
           </span>
         )}
       </div>
       <dl className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
-        <dt className="text-text-muted font-bold">Version</dt>
-        <dd className="col-span-2 font-mono text-text-main truncate">
-          {info?.version || "unknown"}
+        <dt className="text-muted-foreground font-bold">Version</dt>
+        <dd className="col-span-2 font-mono text-foreground truncate">
+          {info?.version || "tidak diketahui"}
         </dd>
-        <dt className="text-text-muted font-bold">Build</dt>
-        <dd className="col-span-2 font-mono text-text-main truncate">
+        <dt className="text-muted-foreground font-bold">Build</dt>
+        <dd className="col-span-2 font-mono text-foreground truncate">
           {info?.buildId || "—"}
         </dd>
-        <dt className="text-text-muted font-bold">Scope</dt>
-        <dd className="col-span-2 font-mono text-text-main truncate">
+        <dt className="text-muted-foreground font-bold">Cakupan</dt>
+        <dd className="col-span-2 font-mono text-foreground truncate">
           {info?.scope || "—"}
         </dd>
-        <dt className="text-text-muted font-bold">Caches</dt>
-        <dd className="col-span-2 font-mono text-text-main">
+        <dt className="text-muted-foreground font-bold">Caches</dt>
+        <dd className="col-span-2 font-mono text-foreground">
           {cacheKeys.length}
         </dd>
       </dl>
+    </div>
+  );
+}
+
+function PwaCapabilitiesCard() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pushStatus, setPushStatus] = useState<string>('unsupported');
+  const [displayMode, setDisplayMode] = useState<string>('browser');
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Check display mode
+    if (window.matchMedia('(display-mode: standalone)').matches) setDisplayMode('standalone');
+    else if (window.matchMedia('(display-mode: minimal-ui)').matches) setDisplayMode('minimal-ui');
+    else if (window.matchMedia('(display-mode: fullscreen)').matches) setDisplayMode('fullscreen');
+    else if ((window.navigator as any).standalone === true) setDisplayMode('standalone (iOS)');
+
+    const mq = window.matchMedia('(display-mode: standalone)');
+    const handleDisplayMode = (e: MediaQueryListEvent) => {
+      if (e.matches) setDisplayMode('standalone');
+      else setDisplayMode('browser');
+    };
+    mq.addEventListener('change', handleDisplayMode);
+
+    // Check push notifications
+    if ('Notification' in window) {
+      setPushStatus(Notification.permission);
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      mq.removeEventListener('change', handleDisplayMode);
+    };
+  }, []);
+
+  const requestNotification = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      setPushStatus(permission);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+      <h3 className="font-black text-foreground text-sm flex items-center gap-2">
+        <Smartphone className="w-4 h-4" /> Integrasi Perangkat & Status
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Jaringan Status */}
+        <div className="flex flex-col p-3 rounded-xl bg-background border border-border shadow-soft">
+          <div className="flex items-center gap-2 mb-1">
+            {isOnline ? <Wifi className="w-4 h-4 text-emerald-600" /> : <WifiOff className="w-4 h-4 text-red-600" />}
+            <span className="font-bold text-sm text-foreground">Network</span>
+          </div>
+          <span className={`text-xs font-bold ${isOnline ? 'text-emerald-600' : 'text-red-600'}`}>
+            {isOnline ? 'Online' : 'Offline'}
+          </span>
+        </div>
+
+        {/* Mode Tampilan */}
+        <div className="flex flex-col p-3 rounded-xl bg-background border border-border shadow-soft">
+          <div className="flex items-center gap-2 mb-1">
+            <Smartphone className="w-4 h-4 text-primary" />
+            <span className="font-bold text-sm text-foreground">Display Mode</span>
+          </div>
+          <span className="text-xs font-medium text-muted-foreground capitalize">
+            {displayMode}
+          </span>
+        </div>
+
+        {/* Notifikasi */}
+        <div className="flex flex-col p-3 rounded-xl bg-background border border-border shadow-soft">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-amber-600" />
+              <span className="font-bold text-sm text-foreground">Notifications</span>
+            </div>
+
+          </div>
+          <span className={`text-xs font-medium capitalize ${pushStatus === 'granted' ? 'text-emerald-600 font-bold' : 'text-muted-foreground'}`}>
+            {pushStatus}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

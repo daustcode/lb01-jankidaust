@@ -4,7 +4,8 @@
 // localStorage and is used by firebaseApi.ts via getActiveClient().
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { supabase as defaultClient } from "@/integrations/supabase/client";
+import { supabase as defaultClient } from '../integrations/supabase/client';
+import { clearCache as clearLocalCache } from './localCache';
 import {
   connectFirestore,
   testFirestore,
@@ -21,11 +22,12 @@ import {
   type FirestoreCollectionProbe,
   type FirestoreWriteMode,
   type FirebaseConfig,
-} from "@/lib/firestoreDriver";
+} from './firestoreDriver';
 
-export type { FirestoreCollectionProbe, FirestoreWriteMode } from "@/lib/firestoreDriver";
+export type { FirestoreCollectionProbe, FirestoreWriteMode } from './firestoreDriver';
 
 export type DbProvider = "supabase" | "firebase";
+export type DbKeyType = "service_role" | "publishable" | "unknown";
 
 export type DbConnection = {
   id: string;
@@ -40,32 +42,42 @@ export type DbConnection = {
 
 const STORAGE_KEY = "janki_db_connections_v1";
 const ACTIVE_KEY = "janki_db_active_v1";
-const DEFAULT_ID = "lovable-cloud";
+const DEFAULT_ID = "lovable-cloud-firebase";
 
+export const DEFAULT_CONNECTION_ID = DEFAULT_ID;
 export const DB_EVENTS = {
   CHANGED: "db-connection-changed",
 };
 
-export type DbKeyType = "publishable" | "service_role" | "unknown";
 
-// Primary backend = Supabase project "supabase-misipenghidupan-lb01".
-// .env values win; the hardcoded fallbacks below ensure the app still boots
-// even if env injection is missing (e.g. an old cached build).
+
+// Fallbacks for backwards compatibility
 const DEFAULT_URL =
-  (import.meta as any).env?.VITE_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
   "https://xmsjbzujyfrkecgwfxlc.supabase.co";
 const DEFAULT_KEY =
-  (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   "sb_publishable_NK7ByKJ_l2qizNoICxrnXQ_-2zTWOiE";
 
 const defaultConnection: DbConnection = {
   id: DEFAULT_ID,
-  label: "Supabase — misipenghidupan-lb01 (default)",
-  url: DEFAULT_URL,
-  key: DEFAULT_KEY,
-  provider: "supabase",
+  label: "Firebase — gen-lang-client-0351002450",
+  url: "firestore://" + "gen-lang-client-0351002450",
+  key: "{\"projectId\":\"gen-lang-client-0351002450\",\"appId\":\"1:120685709098:web:09eeb8e2dbd550eb3bc053\",\"apiKey\":\"AIzaSyB1f7zabwJxQEw_73u89OEeDIwFrRjbFnY\",\"authDomain\":\"gen-lang-client-0351002450.firebaseapp.com\",\"firestoreDatabaseId\":\"ai-studio-04bdc2d3-f530-4d76-abc7-85d55ea3f4f0\",\"storageBucket\":\"gen-lang-client-0351002450.firebasestorage.app\",\"messagingSenderId\":\"120685709098\",\"measurementId\":\"\"}",
+  provider: "firebase",
+  firebaseConfig: {
+  "projectId": "gen-lang-client-0351002450",
+  "appId": "1:120685709098:web:09eeb8e2dbd550eb3bc053",
+  "apiKey": "AIzaSyB1f7zabwJxQEw_73u89OEeDIwFrRjbFnY",
+  "authDomain": "gen-lang-client-0351002450.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-04bdc2d3-f530-4d76-abc7-85d55ea3f4f0",
+  "storageBucket": "gen-lang-client-0351002450.firebasestorage.app",
+  "messagingSenderId": "120685709098",
+  "measurementId": ""
+},
   isDefault: true,
 };
+
 
 // In-memory cache of created clients per connection id
 const clientCache = new Map<string, SupabaseClient>();
@@ -106,6 +118,37 @@ export function getActiveConnection(): DbConnection {
   return listConnections().find((c) => c.id === id) || defaultConnection;
 }
 
+// Track connections that have failed recently so we can transparently fall
+// back to the default Lovable Cloud / Firebase connection instead of hanging
+// the entire app on a broken external Supabase project the user added once
+// and forgot about.
+const failedConnectionIds = new Set<string>();
+
+export function markConnectionFailed(id: string) {
+  if (id === DEFAULT_ID) return;
+  failedConnectionIds.add(id);
+  try {
+    // Auto-revert active selection so subsequent reads use the working default.
+    if (getActiveId() === id) {
+      localStorage.setItem(ACTIVE_KEY, DEFAULT_ID);
+      window.dispatchEvent(new CustomEvent(DB_EVENTS.CHANGED, { detail: { id: DEFAULT_ID, reason: "fallback" } }));
+      console.warn(`[dbConnections] Active connection ${id} failed; reverted to default.`);
+    }
+  } catch {}
+}
+
+export function isConnectionFailed(id: string) {
+  return failedConnectionIds.has(id);
+}
+
+function resolveActiveConnection(): DbConnection {
+  const conn = getActiveConnection();
+  if (conn.id !== DEFAULT_ID && failedConnectionIds.has(conn.id)) {
+    return defaultConnection;
+  }
+  return conn;
+}
+
 export function getClientFor(conn: DbConnection): SupabaseClient {
   if (clientCache.has(conn.id)) return clientCache.get(conn.id)!;
   const c = createClient(conn.url, conn.key, {
@@ -123,6 +166,14 @@ export function setActive(id: string) {
   const conn = listConnections().find((c) => c.id === id);
   if (!conn) return;
   localStorage.setItem(ACTIVE_KEY, id);
+  // Drop any cached payload for OTHER connections so the UI shows fresh
+  // data from the newly-selected backend instead of stale local cache.
+  // We keep the cache for the connection we're switching TO so the UI
+  // can render instantly while the background refresh runs.
+  try {
+    const all = listConnections();
+    all.forEach((c) => { if (c.id !== id) clearLocalCache(c.id); });
+  } catch {}
   window.dispatchEvent(new CustomEvent(DB_EVENTS.CHANGED, { detail: { id } }));
 }
 
@@ -352,7 +403,7 @@ export async function testConnection(
   }
 }
 
-export const DEFAULT_CONNECTION_ID = DEFAULT_ID;
+
 
 // ---------- Edge-function proxy for service-role operations ----------
 // Service-role (sb_secret_*) keys are rejected by Supabase if used from a
@@ -371,15 +422,26 @@ export async function callProxy(payload: {
   onConflict?: string;
   sql?: string;
 }): Promise<any> {
-  const res = await fetch(PROXY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: DEFAULT_KEY,
-      Authorization: `Bearer ${DEFAULT_KEY}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  // Hard timeout so a broken/unreachable proxy can never hang the UI.
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 6000);
+  let res: Response;
+  try {
+    res = await fetch(PROXY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: DEFAULT_KEY,
+        Authorization: `Bearer ${DEFAULT_KEY}`,
+      },
+      body: JSON.stringify(payload),
+      signal: ctl.signal,
+    });
+  } catch (e: any) {
+    clearTimeout(timer);
+    throw new Error(`Proxy unreachable: ${e?.message || e}`);
+  }
+  clearTimeout(timer);
   const text = await res.text();
   let data: any = {};
   try {

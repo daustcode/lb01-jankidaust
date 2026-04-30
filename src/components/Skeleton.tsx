@@ -26,7 +26,7 @@ export function ConnectionListSkeleton({ rows = 2 }: { rows?: number }) {
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="rounded-2xl border border-base-200 bg-base-100 p-4 space-y-3"
+          className="rounded-2xl border border-border bg-card p-4 space-y-3"
         >
           <div className="flex items-center gap-3">
             <Skeleton className="w-10 h-10" rounded="rounded-2xl" />
@@ -53,10 +53,10 @@ export function CrudTableSkeleton({
 }) {
   return (
     <div
-      className="overflow-hidden rounded-xl border border-base-200"
+      className="overflow-hidden rounded-xl border border-border"
       data-testid="crud-skeleton"
     >
-      <div className="bg-base-200/60 px-2 py-2 flex gap-2">
+      <div className="bg-secondary/60 px-2 py-2 flex gap-2">
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} className="h-3 flex-1" />
         ))}
@@ -78,7 +78,7 @@ export function CrudTableSkeleton({
 export function TransferLogSkeleton({ lines = 8 }: { lines?: number }) {
   return (
     <div
-      className="bg-base-100 border border-base-200 rounded-xl p-3 space-y-2"
+      className="bg-card border border-border rounded-xl p-3 space-y-2"
       data-testid="transfer-skeleton"
     >
       {Array.from({ length: lines }).map((_, i) => (
