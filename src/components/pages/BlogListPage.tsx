@@ -5,7 +5,14 @@ import type { Post } from '../../lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Clock, ChevronRight } from 'lucide-react';
-import { Button } from '../ui/button';
+
+function formatDate(d?: string | null) {
+  return d ? new Date(d).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
+}
+
+function todayLabel() {
+  return new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
 
 export function BlogListPage() {
   const { data: posts = [], isLoading } = useQuery<Post[]>({
@@ -18,84 +25,166 @@ export function BlogListPage() {
     }
   });
 
+  const [lead, ...rest] = posts;
+  const secondary = rest.slice(0, 2);
+  const tail = rest.slice(2);
+
   return (
-    <div className="min-h-screen bg-base-50 font-sans pb-20">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 pt-8 md:pt-12">
-        <nav className="mb-6 md:mb-10">
-          <Link href="/" className="inline-flex items-center text-primary font-bold hover:text-primary-700 transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Beranda
+    <div className="min-h-screen bg-background pb-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 pt-8 md:pt-12">
+        <nav className="mb-6">
+          <Link href="/" className="inline-flex items-center text-foreground/70 font-semibold hover:text-foreground transition-colors text-sm uppercase tracking-widest">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Beranda
           </Link>
         </nav>
-        
-        <header className="mb-10 md:mb-16">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-foreground mb-4 font-serif tracking-tight">PPMH Insight</h1>
-          <p className="text-lg md:text-xl text-muted-foreground flex-1">Kumpulan artikel, berita, dan inspirasi dari Pondok Pesantren Miftahul Huda.</p>
+
+        {/* Masthead */}
+        <header className="text-center border-y-4 border-double border-foreground py-8 md:py-10 mb-8">
+          <p className="text-[11px] uppercase tracking-[0.4em] text-muted-foreground mb-3">Edisi Digital · {todayLabel()}</p>
+          <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-foreground leading-none tracking-tight">
+            PPMH <span className="italic font-normal">Insight</span>
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-4 italic font-serif-body">
+            "Membangun generasi unggul melalui keterbukaan informasi."
+          </p>
         </header>
 
+        {/* Section bar */}
+        <div className="flex items-center gap-4 text-xs uppercase tracking-[0.25em] font-bold text-muted-foreground mb-10">
+          <span className="text-foreground">Berita Terbaru</span>
+          <span className="flex-1 editorial-rule" />
+          <span>{posts.length} Artikel</span>
+        </div>
+
         {isLoading ? (
-          <section className="space-y-6 animate-pulse">
-            {[1,2,3].map(i => (
-              <article key={i} className="h-64 bg-base-200 rounded-3xl w-full" />
-            ))}
-          </section>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 h-[420px] bg-muted/40 animate-pulse rounded-sm" />
+            <div className="space-y-6">
+              <div className="h-48 bg-muted/40 animate-pulse rounded-sm" />
+              <div className="h-48 bg-muted/40 animate-pulse rounded-sm" />
+            </div>
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="py-24 text-center text-muted-foreground border border-dashed border-border">
+            <p className="font-serif-body italic">Belum ada artikel yang diterbitkan.</p>
+          </div>
         ) : (
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
-            {posts.length === 0 && (
-              <div className="col-span-full py-12 text-center text-muted-foreground bg-base-0 rounded-3xl border border-border">
-                <p>Belum ada artikel yang diterbitkan.</p>
-              </div>
-            )}
-            
-            {posts.map((post) => (
-              <article key={post.id} className="group bg-base-0 rounded-3xl border border-border shadow-soft hover:shadow-hover transition-all duration-300 flex flex-col overflow-hidden">
-                <Link href={`/blog/${post.slug || post.id}`} className="block overflow-hidden relative">
-                  {post.featured_image ? (
-                    <div className="w-full h-48 sm:h-56 bg-base-200 relative">
-                      <Image src={post.featured_image} alt={post.title} fill referrerPolicy="no-referrer" className="object-cover transition-transform duration-500 group-hover:scale-105" />
-                    </div>
-                  ) : (
-                    <div className="w-full h-48 sm:h-56 bg-primary/5 flex items-center justify-center relative">
-                      <span className="text-primary/30 font-serif font-black text-4xl">PPMH</span>
-                    </div>
-                  )}
-                </Link>
-                <div className="p-6 md:p-8 flex flex-col flex-1">
-                  <header>
-                    {post.category && (
-                      <span className="inline-block px-3 py-1 bg-primary/10 text-primary-700 text-xs font-bold rounded-full mb-4 uppercase tracking-wider">
-                        {post.category}
+          <>
+            {/* Lead story + secondary */}
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 pb-12 mb-12 border-b border-border">
+              {lead && (
+                <article className="lg:col-span-2 group">
+                  <Link href={`/blog/${lead.slug || lead.id}`} className="block">
+                    {lead.featured_image ? (
+                      <div className="relative w-full aspect-[16/10] overflow-hidden mb-6 bg-muted">
+                        <Image src={lead.featured_image} alt={lead.title} fill referrerPolicy="no-referrer" className="object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+                      </div>
+                    ) : (
+                      <div className="w-full aspect-[16/10] bg-foreground/[0.03] flex items-center justify-center mb-6">
+                        <span className="font-display text-foreground/10 text-7xl font-black">PPMH</span>
+                      </div>
+                    )}
+                    {lead.category && (
+                      <span className="inline-block text-[10px] uppercase tracking-[0.3em] font-bold text-primary mb-3">
+                        {lead.category}
                       </span>
                     )}
-                    <h2 className="text-2xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2 md:line-clamp-3 leading-snug">
-                      <Link href={`/blog/${post.slug || post.id}`}>
-                        {post.title}
-                      </Link>
+                    <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-black text-foreground leading-[1.05] tracking-tight group-hover:text-primary transition-colors">
+                      {lead.title}
                     </h2>
-                  </header>
-                  
-                  {post.excerpt && (
-                    <p className="text-muted-foreground text-sm md:text-base line-clamp-3 mb-6 flex-1">
-                      {post.excerpt}
-                    </p>
-                  )}
-                  
-                  <footer className="mt-auto pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center text-xs font-semibold text-muted-foreground">
-                      <Clock className="w-4 h-4 mr-1.5 text-primary" />
-                      <time dateTime={post.published_at || new Date().toISOString()}>{post.published_at ? new Date(post.published_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}</time>
+                    {lead.excerpt && (
+                      <p className="font-serif-body text-lg text-foreground/75 mt-4 leading-relaxed line-clamp-3">
+                        {lead.excerpt}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground mt-5 font-semibold">
+                      <Clock className="w-3.5 h-3.5" />
+                      <time>{formatDate(lead.published_at)}</time>
                     </div>
-                    
-                    <Button variant="ghost" className="w-full sm:w-auto font-bold text-primary hover:text-primary-700 hover:bg-primary/10 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300" asChild>
-                      <Link href={`/blog/${post.slug || post.id}`}>
-                        Baca Selengkapnya
-                        <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
-                      </Link>
-                    </Button>
-                  </footer>
+                  </Link>
+                </article>
+              )}
+
+              <div className="lg:col-span-1 lg:border-l lg:border-border lg:pl-8 space-y-8 divide-y divide-border">
+                {secondary.map((post, idx) => (
+                  <article key={post.id} className={`group ${idx > 0 ? 'pt-8' : ''}`}>
+                    <Link href={`/blog/${post.slug || post.id}`} className="block">
+                      {post.featured_image && (
+                        <div className="relative w-full aspect-[16/9] overflow-hidden mb-4 bg-muted">
+                          <Image src={post.featured_image} alt={post.title} fill referrerPolicy="no-referrer" className="object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+                        </div>
+                      )}
+                      {post.category && (
+                        <span className="inline-block text-[10px] uppercase tracking-[0.3em] font-bold text-primary mb-2">
+                          {post.category}
+                        </span>
+                      )}
+                      <h3 className="font-display text-xl md:text-2xl font-bold text-foreground leading-tight group-hover:text-primary transition-colors">
+                        {post.title}
+                      </h3>
+                      {post.excerpt && (
+                        <p className="font-serif-body text-sm text-foreground/70 mt-2 leading-relaxed line-clamp-2">
+                          {post.excerpt}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground mt-3 font-semibold">
+                        <Clock className="w-3 h-3" />
+                        <time>{formatDate(post.published_at)}</time>
+                      </div>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            {/* Editorial grid – the rest */}
+            {tail.length > 0 && (
+              <>
+                <div className="flex items-center gap-4 text-xs uppercase tracking-[0.25em] font-bold text-muted-foreground mb-8">
+                  <span className="text-foreground">Lebih Banyak</span>
+                  <span className="flex-1 editorial-rule" />
                 </div>
-              </article>
-            ))}
-          </section>
+                <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                  {tail.map((post) => (
+                    <article key={post.id} className="group">
+                      <Link href={`/blog/${post.slug || post.id}`} className="block">
+                        {post.featured_image ? (
+                          <div className="relative w-full aspect-[4/3] overflow-hidden mb-4 bg-muted">
+                            <Image src={post.featured_image} alt={post.title} fill referrerPolicy="no-referrer" className="object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+                          </div>
+                        ) : (
+                          <div className="w-full aspect-[4/3] bg-foreground/[0.03] flex items-center justify-center mb-4">
+                            <span className="font-display text-foreground/10 text-4xl font-black">PPMH</span>
+                          </div>
+                        )}
+                        {post.category && (
+                          <span className="inline-block text-[10px] uppercase tracking-[0.3em] font-bold text-primary mb-2">
+                            {post.category}
+                          </span>
+                        )}
+                        <h3 className="font-display text-xl font-bold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-3">
+                          {post.title}
+                        </h3>
+                        {post.excerpt && (
+                          <p className="font-serif-body text-sm text-foreground/70 mt-2 leading-relaxed line-clamp-2">
+                            {post.excerpt}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                          <time className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
+                            {formatDate(post.published_at)}
+                          </time>
+                          <span className="inline-flex items-center text-xs font-bold text-primary uppercase tracking-widest">
+                            Baca <ChevronRight className="w-3 h-3 ml-0.5 transition-transform group-hover:translate-x-0.5" />
+                          </span>
+                        </div>
+                      </Link>
+                    </article>
+                  ))}
+                </section>
+              </>
+            )}
+          </>
         )}
       </div>
     </div>
