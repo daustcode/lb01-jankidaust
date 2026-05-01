@@ -46,30 +46,31 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-base-50 font-sans pb-20">
-      {/* Hero Section */}
-      <section className="bg-primary/5 border-b border-primary/10 relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 pt-20 pb-24 relative z-10">
-          <motion.div 
+    <div className="min-h-screen bg-background pb-20">
+      {/* Hero / Masthead */}
+      <section className="border-b-4 border-double border-foreground">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 pt-14 pb-16 md:pt-20 md:pb-20 text-center">
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center max-w-3xl mx-auto"
           >
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary-700 text-sm font-bold mb-6">
-              <Activity className="w-4 h-4" /> Sistem Informasi Terpadu
-            </span>
-            <h1 className="text-5xl md:text-7xl font-black text-foreground mb-6 font-serif tracking-tight leading-tight">
-              PPMH <span className="text-primary block md:inline">Insight</span>
-            </h1>
-            <p className="text-xl text-muted-foreground mb-10 leading-relaxed">
-              Platform pusat data, pencapaian santri, dan berita terkini Pondok Pesantren Miftahul Huda. Membangun generasi unggul melalui keterbukaan informasi.
+            <p className="text-[11px] uppercase tracking-[0.4em] text-muted-foreground mb-4 inline-flex items-center gap-2">
+              <Activity className="w-3 h-3" /> Sistem Informasi Terpadu Pesantren
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/leaderboard" className="px-8 py-4 rounded-xl bg-primary text-white font-bold shadow-primary-glow hover:-translate-y-1 transition-transform w-full sm:w-auto text-center inline-flex justify-center items-center">
-                <Trophy className="w-5 h-5 mr-2" /> Lihat Leaderboard
+            <h1 className="font-display text-6xl md:text-8xl lg:text-9xl font-black text-foreground tracking-tight leading-[0.9]">
+              PPMH <span className="italic font-normal text-primary">Insight</span>
+            </h1>
+            <div className="mt-6 max-w-2xl mx-auto">
+              <p className="font-serif-body italic text-lg md:text-xl text-foreground/70 leading-relaxed">
+                Pusat data, pencapaian santri, dan berita terkini Pondok Pesantren Miftahul Huda — disajikan dengan keterbukaan dan kejernihan.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-10">
+              <Link href="/leaderboard" className="px-8 py-3.5 bg-foreground text-background font-bold uppercase tracking-widest text-xs hover:bg-primary transition-colors w-full sm:w-auto inline-flex justify-center items-center">
+                <Trophy className="w-4 h-4 mr-2" /> Lihat Leaderboard
               </Link>
-              <Link href="/blog" className="px-8 py-4 rounded-xl bg-base-0 text-foreground border border-border font-bold hover:bg-base-50 transition-colors w-full sm:w-auto text-center inline-flex justify-center items-center">
-                <BookOpen className="w-5 h-5 mr-2" /> Baca Artikel
+              <Link href="/blog" className="px-8 py-3.5 border-2 border-foreground text-foreground font-bold uppercase tracking-widest text-xs hover:bg-foreground hover:text-background transition-colors w-full sm:w-auto inline-flex justify-center items-center">
+                <BookOpen className="w-4 h-4 mr-2" /> Baca Insight
               </Link>
             </div>
           </motion.div>
