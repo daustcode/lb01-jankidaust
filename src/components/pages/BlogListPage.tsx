@@ -4,7 +4,8 @@ import { apiFetch } from '../../lib/api';
 import type { Post } from '../../lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Clock, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, ChevronRight, LayoutGrid } from 'lucide-react';
+import { slugifyCategory } from '../../lib/categorySlug';
 
 function formatDate(d?: string | null) {
   return d ? new Date(d).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
