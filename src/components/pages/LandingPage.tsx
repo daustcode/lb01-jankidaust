@@ -179,20 +179,22 @@ export function LandingPage() {
         }}
         className="max-w-6xl mx-auto px-4 md:px-8 py-16"
       >
-        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
+        <div className="flex items-end justify-between gap-4 mb-10">
           <div>
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/20 text-secondary-700 text-sm font-bold mb-4">
-              <BookOpen className="w-4 h-4" /> Berita Terkini
-            </span>
-            <h2 className="text-4xl font-black font-serif text-foreground">Sekilas PPMH</h2>
+            <p className="text-[11px] uppercase tracking-[0.4em] text-muted-foreground mb-3 inline-flex items-center gap-2">
+              <BookOpen className="w-3 h-3" /> Sekilas PPMH
+            </p>
+            <h2 className="font-display text-4xl md:text-5xl font-black text-foreground tracking-tight">Berita & Insight</h2>
           </div>
-          <Link href="/blog" className="inline-flex items-center text-primary font-bold hover:text-primary-700 transition-colors">
-            Lihat Semua Artikel <ArrowRight className="w-4 h-4 ml-1" />
+          <Link href="/blog" className="inline-flex items-center text-foreground font-bold hover:text-primary transition-colors uppercase tracking-widest text-xs border-b border-foreground hover:border-primary pb-1">
+            Semua Artikel <ArrowRight className="w-3.5 h-3.5 ml-1" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {posts.map((post, i) => (
+        <div className="editorial-rule mb-10" />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-12">
+          {posts.map((post) => (
             <motion.div
               key={post.id}
               variants={{
@@ -200,40 +202,38 @@ export function LandingPage() {
                 visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 50 } }
               }}
             >
-              <Link href={`/blog/${post.slug || post.id}`} className="group block h-full bg-base-0 rounded-3xl border border-border shadow-soft overflow-hidden hover:shadow-hover transition-all duration-300 flex flex-col">
+              <Link href={`/blog/${post.slug || post.id}`} className="group block h-full">
                 {post.featured_image ? (
-                  <div className="w-full h-48 bg-base-200 overflow-hidden relative shrink-0">
-                    <Image src={post.featured_image} alt={post.title} fill referrerPolicy="no-referrer" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <div className="relative w-full aspect-[4/3] overflow-hidden mb-4 bg-muted">
+                    <Image src={post.featured_image} alt={post.title} fill referrerPolicy="no-referrer" className="object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
                   </div>
                 ) : (
-                  <div className="w-full h-48 bg-primary/5 flex items-center justify-center shrink-0">
-                    <BookOpen className="w-12 h-12 text-primary/20" />
+                  <div className="w-full aspect-[4/3] bg-foreground/[0.03] flex items-center justify-center mb-4">
+                    <BookOpen className="w-10 h-10 text-foreground/20" />
                   </div>
                 )}
-                <div className="p-6 flex flex-col flex-1">
-                  {post.category && (
-                    <span className="inline-block w-fit px-3 py-1 bg-base-100 text-muted-foreground text-xs font-bold rounded-full mb-4 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                      {post.category}
-                    </span>
-                  )}
-                  <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2">
-                    {post.title}
-                  </h3>
-                  <p className="text-muted-foreground text-sm line-clamp-3 mb-6 flex-1">
-                    {post.excerpt || 'Klik untuk membaca selengkapnya...'}
-                  </p>
-                  <div className="flex items-center text-xs text-muted-foreground font-medium mt-auto pt-4 border-t border-border">
-                    <Clock className="w-3.5 h-3.5 mr-1.5" />
-                    {post.published_at ? new Date(post.published_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
-                  </div>
+                {post.category && (
+                  <span className="inline-block text-[10px] uppercase tracking-[0.3em] font-bold text-primary mb-2">
+                    {post.category}
+                  </span>
+                )}
+                <h3 className="font-display text-xl md:text-2xl font-bold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-3">
+                  {post.title}
+                </h3>
+                <p className="font-serif-body text-sm text-foreground/70 mt-2 leading-relaxed line-clamp-2">
+                  {post.excerpt || 'Klik untuk membaca selengkapnya…'}
+                </p>
+                <div className="flex items-center text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mt-4 pt-3 border-t border-border">
+                  <Clock className="w-3 h-3 mr-1.5" />
+                  {post.published_at ? new Date(post.published_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
                 </div>
               </Link>
             </motion.div>
           ))}
           {posts.length === 0 && (
-            <div className="col-span-3 text-center py-20 bg-base-0 border border-dashed border-border rounded-3xl">
+            <div className="col-span-3 text-center py-20 border border-dashed border-border">
               <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-              <p className="text-muted-foreground font-medium">Belum ada artikel yang diterbitkan.</p>
+              <p className="text-muted-foreground font-serif-body italic">Belum ada artikel yang diterbitkan.</p>
             </div>
           )}
         </div>
