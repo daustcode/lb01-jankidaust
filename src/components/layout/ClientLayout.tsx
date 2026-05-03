@@ -202,7 +202,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       />
 
       {/* Scroll to top – bottom-right, above FAB (with breathing room) */}
-      <div className="fixed bottom-48 md:bottom-24 right-4 z-50">
+      <div className="fixed bottom-40 md:bottom-16 right-4 z-50">
         <ScrollToTop />
       </div>
 
