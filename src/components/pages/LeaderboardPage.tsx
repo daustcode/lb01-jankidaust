@@ -236,7 +236,7 @@ function LeaderboardPage({ students, masterGoals, calculateTotalPoints, navigate
           
           {/* HORIZONTAL TIME FILTERS */}
           <div className="flex justify-center mt-6">
-            <div className="bg-secondary/30 backdrop-blur-md p-1.5 rounded-full flex items-center gap-1 overflow-x-auto no-scrollbar scrollbar-hide snap-x">
+            <div className="bg-secondary/30 backdrop-blur-md p-1.5 rounded-full grid grid-flow-col auto-cols-fr gap-1 w-full max-w-md">
                {TIME_RANGE_OPTIONS.map((opt) => (
                  <button 
                   key={opt.value} 
@@ -244,7 +244,7 @@ function LeaderboardPage({ students, masterGoals, calculateTotalPoints, navigate
                     setTimeFilter(opt.value);
                     trackEvent('leaderboard_filter', { metadata: { range: opt.value } });
                   }}
-                  className={`px-5 py-2 rounded-full text-xs md:text-sm font-bold uppercase tracking-wider transition-all snap-center whitespace-nowrap active:scale-95 ${
+                  className={`px-2 py-2 rounded-full text-xs md:text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap text-center active:scale-95 ${
                     timeFilter === opt.value ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                   }`}
                  >
