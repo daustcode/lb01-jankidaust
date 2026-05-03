@@ -47,8 +47,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
       setPresetOverride(saved);
     } else {
       // Default to fresh_majestic (Green-Yellow) on first visit
-      setPresetOverride("fresh_majestic");
-      if (typeof window !== "undefined") localStorage.setItem("theme-preset", "fresh_majestic");
+      setPresetOverride("fresh_majestic_yellow");
+      if (typeof window !== "undefined") localStorage.setItem("theme-preset", "fresh_majestic_yellow");
     }
   }, []);
 
@@ -67,7 +67,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   }, [presetOverride, appSettings.activePresetId]);
 
   const activePresetName =
-    PRESETS[presetOverride || appSettings.activePresetId || "fresh_majestic"]?.name || "Theme";
+    PRESETS[presetOverride || appSettings.activePresetId || "fresh_majestic_yellow"]?.name || "Theme";
 
   const [themeMode, setThemeMode] = useState<"light" | "dark">("dark");
 
@@ -195,7 +195,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       <FloatingSettingsFab
         themeMode={themeMode}
         toggleTheme={toggleTheme}
-        activePresetId={presetOverride || appSettings.activePresetId || "fresh_majestic"}
+        activePresetId={presetOverride || appSettings.activePresetId || "fresh_majestic_yellow"}
         cyclePreset={cyclePreset}
         activePresetName={activePresetName}
         isAdmin={isAdmin}
