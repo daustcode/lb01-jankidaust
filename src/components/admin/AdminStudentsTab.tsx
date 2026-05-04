@@ -822,14 +822,9 @@ function StudentAdminModal({ student, masterGoals, categories, onClose, onSave }
           </Button>
         </div>
       </motion.div>
-      <CompletionAuditPanel
-        isOpen={!!auditState}
-        onClose={() => setAuditState(null)}
-        studentId={formData.id || 'new'}
-        selectedGoalIds={auditState?.goalIds || []}
-        existingData={auditState?.existing || null}
-        onSubmit={handleAuditSubmit}
-      />
+    </div>
+  );
+}
     </div>
   );
 }
