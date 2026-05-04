@@ -201,7 +201,7 @@ function GoalAuditCard({
                             {date ? format(date, 'PPP') : 'Pilih tanggal'}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 z-[80]" align="start">
                           <Calendar
                             mode="single"
                             selected={date}
@@ -222,7 +222,7 @@ function GoalAuditCard({
                         <SelectTrigger className="h-10">
                           <SelectValue placeholder="Pilih admin" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[80]">
                           {adminOptions.map(a => (
                             <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                           ))}
