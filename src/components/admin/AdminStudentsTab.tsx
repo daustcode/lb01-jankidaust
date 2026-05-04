@@ -825,6 +825,3 @@ function StudentAdminModal({ student, masterGoals, categories, onClose, onSave }
     </div>
   );
 }
-    </div>
-  );
-}
