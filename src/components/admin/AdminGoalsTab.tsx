@@ -29,7 +29,26 @@ import {
   FALLBACK_CATEGORY_ID,
   type HierarchyGroupNode,
 } from "@/lib/hierarchy";
-import { SortableList, DragHandle } from "./editor/sortable";
+import { SortableList, DragHandle, SortableRow } from "./editor/sortable";
+import {
+  DndContext,
+  closestCenter,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  type DragEndEvent,
+  type DragOverEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
 
 // ---------------------------------------------------------------------------
 // AdminGoalsTab — 3-tier accordion: Group → Category → Goal.
