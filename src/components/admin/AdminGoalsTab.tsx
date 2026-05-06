@@ -528,7 +528,6 @@ export function AdminGoalsTab({
           );
         }}
       />
-      </div>
 
       {goalModalOpen && (
         <GoalAdminModal
