@@ -1,4 +1,4 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import {
   initializeFirestore,
@@ -7,8 +7,9 @@ import {
   getFirestore,
 } from "firebase/firestore";
 
-// Phase 3: Firebase init driven strictly by .env variables.
-const firebaseConfig = {
+// Phase 1: Single source of truth — strictly driven by .env (NEXT_PUBLIC_*).
+// No hardcoded project ids, no JSON fallback.
+export const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
@@ -17,42 +18,35 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
 };
 
-// Database ID from env; NEVER fall back to the literal "(default)".
-const DB_ID = process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_DB_ID || "";
+// Optional: explicit named DB id from env. NEVER pass literal "(default)".
+const RAW_DB_ID = process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_DB_ID || "";
+const DB_ID = RAW_DB_ID && RAW_DB_ID !== "(default)" ? RAW_DB_ID : "";
 
-// Initialize app once (HMR-safe)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
 const auth = getAuth(app);
 
 /**
- * Firestore with IndexedDB offline persistence.
- *
- * - On the browser we use `initializeFirestore` + `persistentLocalCache` with
- *   the multi-tab manager so multiple tabs share one cache (replaces the
- *   deprecated `enableMultiTabIndexedDbPersistence`).
- * - On the server (SSR) IndexedDB does not exist; we fall back to the
- *   default in-memory `getFirestore` so imports don't crash during build.
- * - Wrapped in try/catch: if the browser blocks IDB (e.g. private mode in
- *   older Safari) we degrade to the default in-memory Firestore.
+ * Firestore with IndexedDB persistence (multi-tab) when in browser.
+ * SSR falls back to default in-memory Firestore so imports don't crash.
+ * Phase 1: never pass "(default)" — when DB_ID is empty omit the arg entirely.
  */
 function createDb() {
   if (typeof window === "undefined") {
-    return getFirestore(app, DB_ID);
+    return DB_ID ? getFirestore(app, DB_ID) : getFirestore(app);
   }
   try {
     return initializeFirestore(
       app,
       {
-        experimentalForceLongPolling: true,
+        experimentalAutoDetectLongPolling: true,
         localCache: persistentLocalCache({
           tabManager: persistentMultipleTabManager(),
         }),
       },
-      DB_ID,
+      DB_ID || undefined as any,
     );
   } catch {
-    return getFirestore(app, DB_ID);
+    return DB_ID ? getFirestore(app, DB_ID) : getFirestore(app);
   }
 }
 
