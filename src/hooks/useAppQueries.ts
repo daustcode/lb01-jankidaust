@@ -18,7 +18,8 @@ export function useAppDataQuery() {
   return useQuery({
     queryKey: ['app-data'],
     queryFn: fetchAppData,
-    staleTime: 120000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     retry: false,
   });
 }
