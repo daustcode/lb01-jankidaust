@@ -9,7 +9,9 @@ import {
 } from "firebase/firestore";
 
 // Phase 1: Single source of truth — strictly driven by .env (NEXT_PUBLIC_*).
-// No hardcoded project ids, no JSON fallback.
+// No hardcoded project ids, no JSON fallback. Missing values log a loud
+// warning so misconfiguration is caught immediately instead of silently
+// hitting the wrong Firebase project.
 export const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
@@ -17,7 +19,19 @@ export const firebaseConfig: FirebaseOptions = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || undefined,
 };
+
+const REQUIRED_KEYS = ["apiKey", "authDomain", "projectId", "appId"] as const;
+const missing = REQUIRED_KEYS.filter((k) => !firebaseConfig[k]);
+if (missing.length) {
+  // eslint-disable-next-line no-console
+  console.error(
+    `[firebase/config] Missing required NEXT_PUBLIC_FIREBASE_* env vars: ${missing
+      .map((k) => `NEXT_PUBLIC_FIREBASE_${k.replace(/[A-Z]/g, (c) => "_" + c).toUpperCase()}`)
+      .join(", ")}. Set them in your .env file.`,
+  );
+}
 
 // Optional: explicit named DB id from env. NEVER pass literal "(default)".
 const RAW_DB_ID = process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_DB_ID || "";
